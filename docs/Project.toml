@@ -1,0 +1,3 @@
+[deps]
+BinnedStatistics = "b1065af9-dcad-4f81-8559-1003c45b126b"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
