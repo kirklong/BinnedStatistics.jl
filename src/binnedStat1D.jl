@@ -61,13 +61,13 @@ function binnedStatistic(x::Array{Float64,}, y::Array{Float64,}; nbins::Int=100,
     Δ = nbins / (binMax - binMin) #spacing
     if statistic == :sum
         for (x, y) in zip(x, y)
-            i = min(nbins, 1 + floor(Int, Δ * (x - binMin))) #which bin are we in at this x?
+            i = min(nbins, 1 + floor(Int, Δ * max(0., x - binMin))) #which bin are we in at this x?
             result[i] += y
         end
     elseif statistic == :mean || statistic == :std || statistic == :var
         N = zeros(nbins)
         for (x, y) in zip(x, y)
-            i = min(nbins, 1 + floor(Int, Δ * (x - binMin)))
+            i = min(nbins, 1 + floor(Int, Δ * max(0., x - binMin)))
             result[i] += y
             N[i] += 1 #need to keep track of number of counts in each bin for mean, std, var
         end
@@ -77,7 +77,7 @@ function binnedStatistic(x::Array{Float64,}, y::Array{Float64,}; nbins::Int=100,
             μ = copy(result)
             result = zeros(nbins)
             for (x, y) in zip(x, y)
-                i = min(nbins, 1 + floor(Int, Δ * (x - binMin)))
+                i = min(nbins, 1 + floor(Int, Δ * max(0., x - binMin)))
                 result[i] += (y-μ[i])^2
             end
             result ./= N
@@ -87,7 +87,7 @@ function binnedStatistic(x::Array{Float64,}, y::Array{Float64,}; nbins::Int=100,
         end
     elseif statistic == :median || statistic == :f #this is much slower than other options
         result = zeros(nbins)
-        i = min.(nbins, 1 .+ floor.(Int, Δ .* (x .- binMin)))
+        i = min.(nbins, 1 .+ floor.(Int, Δ * max.(0., x .- binMin)))
         for ind in unique(i)
             result[ind] = statistic == :median ? median(y[i.==ind]) : f(y[i.==ind])
         end
