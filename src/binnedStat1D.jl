@@ -45,7 +45,7 @@ if using this new, faster version we obtain a ~15-20x speed-up:
 
 These tests were performed using Julia 1.6.1 on a system running Linux Mint 20.3 Cinnamon with a Intel Core i7-1065G7 CPU (4 cores @ 1.3 GHz)
 """
-function binnedStatistic(x::Array{Float64,}, y::Array{Float64,}; nbins::Int=100, statistic::Symbol=:sum, f::Function=binnedStatistic,binMax=nothing,binMin=nothing)
+function binnedStatistic(x::Array{Float64,}, y::Array{Float64,}; nbins::Int=100, statistic::Symbol=:sum, f::Function=binnedStatistic,binMax=nothing,binMin=nothing,centered=false)
     if length(x) > 0 && nbins < 1
         throw(ArgumentError("number of bins must be ≥ 1 for a non-empty array, got $nbins"))
     end
@@ -59,15 +59,16 @@ function binnedStatistic(x::Array{Float64,}, y::Array{Float64,}; nbins::Int=100,
     end
     result = zeros(nbins)
     Δ = nbins / (binMax - binMin) #spacing
+    sub = centered == false ? binMin : binMin+Δ/2 #subtract binMin + Δ/2 to "center" bins (i.e. binMin and binMax are centers, not edges)
     if statistic == :sum
         for (x, y) in zip(x, y)
-            i = min(nbins, 1 + floor(Int, Δ * max(0., x - binMin))) #which bin are we in at this x?
+            i = min(nbins, 1 + floor(Int, Δ * max(0., x - sub))) #which bin are we in at this x?
             result[i] += y
         end
     elseif statistic == :mean || statistic == :std || statistic == :var
         N = zeros(nbins)
         for (x, y) in zip(x, y)
-            i = min(nbins, 1 + floor(Int, Δ * max(0., x - binMin)))
+            i = min(nbins, 1 + floor(Int, Δ * max(0., x - sub)))
             result[i] += y
             N[i] += 1 #need to keep track of number of counts in each bin for mean, std, var
         end
@@ -77,7 +78,7 @@ function binnedStatistic(x::Array{Float64,}, y::Array{Float64,}; nbins::Int=100,
             μ = copy(result)
             result = zeros(nbins)
             for (x, y) in zip(x, y)
-                i = min(nbins, 1 + floor(Int, Δ * max(0., x - binMin)))
+                i = min(nbins, 1 + floor(Int, Δ * max(0., x - sub)))
                 result[i] += (y-μ[i])^2
             end
             result ./= N
@@ -87,14 +88,14 @@ function binnedStatistic(x::Array{Float64,}, y::Array{Float64,}; nbins::Int=100,
         end
     elseif statistic == :median || statistic == :f #this is much slower than other options
         result = zeros(nbins)
-        i = min.(nbins, 1 .+ floor.(Int, Δ * max.(0., x .- binMin)))
+        i = min.(nbins, 1 .+ floor.(Int, Δ * max.(0., x .- sub)))
         for ind in unique(i)
             result[ind] = statistic == :median ? median(y[i.==ind]) : f(y[i.==ind])
         end
     else
         throw(ArgumentError("Valid statistic options are :sum, :mean, :std, :var, :median, or :f (use :f for custom function), got $statistic"))
     end
-    edges = range(binMin, stop=binMax, length=nbins+1)
+    edges = centered == false ? range(binMin, stop=binMax, length=nbins+1) : range(binMin, stop=binMax, length=nbins+1) .+ Δ/2
     centers = [(edges[i]+edges[i+1])/2 for i=1:length(edges)-1]
     return edges, centers, result
 end
