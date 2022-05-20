@@ -59,7 +59,7 @@ function binnedStatistic(x::Array{Float64,}, y::Array{Float64,}; nbins::Int=100,
     end
     result = zeros(nbins)
     Δ = nbins / (binMax - binMin) #spacing
-    sub = centered == false ? binMin : binMin+Δ/2 #subtract binMin + Δ/2 to "center" bins (i.e. binMin and binMax are centers, not edges)
+    sub = centered == false ? binMin : binMin-1/Δ/2 #add Δ/2 to "center" bins (i.e. binMin and binMax are centers, not edges)
     if statistic == :sum
         for (x, y) in zip(x, y)
             i = min(nbins, 1 + floor(Int, Δ * max(0., x - sub))) #which bin are we in at this x?
@@ -95,7 +95,7 @@ function binnedStatistic(x::Array{Float64,}, y::Array{Float64,}; nbins::Int=100,
     else
         throw(ArgumentError("Valid statistic options are :sum, :mean, :std, :var, :median, or :f (use :f for custom function), got $statistic"))
     end
-    edges = centered == false ? range(binMin, stop=binMax, length=nbins+1) : range(binMin, stop=binMax, length=nbins+1) .+ Δ/2
+    edges = centered == false ? range(binMin, stop=binMax, length=nbins+1) : range(binMin, stop=binMax, length=nbins+1) .- 1/Δ/2
     centers = [(edges[i]+edges[i+1])/2 for i=1:length(edges)-1]
     return edges, centers, result
 end
